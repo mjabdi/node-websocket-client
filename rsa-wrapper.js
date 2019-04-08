@@ -5,10 +5,10 @@ const NodeRSA = require('node-rsa');
 const crypto = require('crypto');
 
 // load keys from file
-rsaWrapper.initLoadServerKeys = () => {
+rsaWrapper.initLoadServerKeys = (bank) => {
 
-    let privateKeyPath = path.resolve(__dirname, './keys' ,  'MELI.private.pem');
-    let publicKeyPath = path.resolve(__dirname, './keys' , 'MELI.public.pem');
+    let privateKeyPath = path.resolve(__dirname, './keys' ,  bank + '.private.pem');
+    let publicKeyPath = path.resolve(__dirname, './keys' , bank + '.public.pem');
 
     rsaWrapper.bankPub = fs.readFileSync(publicKeyPath);
     rsaWrapper.bankPrivate = fs.readFileSync(privateKeyPath);
@@ -38,7 +38,7 @@ rsaWrapper.decrypt = (privateKey, message) => {
     }
     catch(err)
     {
-        throw new Error('Invalid Certificate');
+        throw new Error(`Invalid Certificate`);
     }
 };
 

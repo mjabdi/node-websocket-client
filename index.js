@@ -3,7 +3,7 @@
 const rsaWrapper = require('./rsa-wrapper');
 const aesWrapper = require('./aes-wrapper');
 
-const serverAddress = 'ws://ws.nps-osh-xmaster.iranet.net';
+const serverAddress = 'ws://localhost:8001';
 
 var WebSocketClient = require('websocket').client;
 
@@ -14,7 +14,7 @@ var client = new WebSocketClient();
 var handshake = null;
 var sharedKey = null;
 
-rsaWrapper.initLoadServerKeys();
+rsaWrapper.initLoadServerKeys(myName);
 
 client.on('connectFailed', function (error) {
     console.log('Connect Error: ' + error.toString());

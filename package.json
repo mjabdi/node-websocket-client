@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js 'MELI'"
+    "start": "node index.js 'BSIR'"
   },
   "keywords": [],
   "author": "",
