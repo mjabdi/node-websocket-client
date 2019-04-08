@@ -3,7 +3,7 @@
 const rsaWrapper = require('./rsa-wrapper');
 const aesWrapper = require('./aes-wrapper');
 
-const serverAddress = 'ws://localhost:8001';
+const serverAddress = 'ws://ws.nps-osh-xmaster.iranet.net';
 
 var WebSocketClient = require('websocket').client;
 
