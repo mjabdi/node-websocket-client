@@ -14,6 +14,8 @@ var client = new WebSocketClient();
 var handshake = null;
 var sharedKey = null;
 
+let counter = 0;
+
 rsaWrapper.initLoadServerKeys(myName);
 
 client.on('connectFailed', function (error) {
@@ -90,8 +92,9 @@ client.on('connect', function (connection) {
                 }
             }
             else {
+                counter++;
                 var msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, message.utf8Data);
-                console.log('received decrypted : ' + msg_dec);
+                console.log(`${counter} - received decrypted : ${msg_dec}`);
             }
 
         }
