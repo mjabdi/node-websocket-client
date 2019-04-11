@@ -33,7 +33,7 @@ client.on('connect', function (connection) {
     });
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            console.log("Received: '" + message.utf8Data + "'");
+           // console.log("Received: '" + message.utf8Data + "'");
 
             if (!handshake) {
                 var question_enc = JSON.parse(message.utf8Data).question;
@@ -94,7 +94,10 @@ client.on('connect', function (connection) {
             else {
                 counter++;
                 var msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, message.utf8Data);
-                console.log(`${counter} - received decrypted : ${msg_dec}`);
+                if (counter % 1000 == 0)
+                {
+                    console.log(`${counter} - received decrypted : ${msg_dec}`);
+                }
             }
 
         }
