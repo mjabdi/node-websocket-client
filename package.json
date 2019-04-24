@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js 'BSIR'"
+    "start": "node index.js 'BSIR'",
+    "start-listen": "node index.js 'MELI' --listen"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +13,7 @@
   "dependencies": {
     "crypto": "^1.0.1",
     "node-rsa": "^1.0.5",
+    "uuid": "^3.3.2",
     "websocket": "^1.0.28"
   }
 }

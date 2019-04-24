@@ -2,10 +2,13 @@
 
 const rsaWrapper = require('./rsa-wrapper');
 const aesWrapper = require('./aes-wrapper');
+const uuidv4 = require('uuid/v4');
 
 const serverAddress = 'ws://localhost:8001';
 
 var WebSocketClient = require('websocket').client;
+
+const listenMode = (process.argv.length >=4 && process.argv[3].trim() === '--listen');
 
 const myName = process.argv[2].trim();
 
@@ -15,6 +18,11 @@ var handshake = null;
 var sharedKey = null;
 
 let counter = 0;
+let callsCount = 0;
+let duplicates = 0;
+
+var acks = [];
+var recv_ids = [];
 
 rsaWrapper.initLoadServerKeys(myName);
 
@@ -29,11 +37,15 @@ client.on('connect', function (connection) {
     });
     connection.on('close', function () {
         console.log('Connection Closed');
-        //RetryConnect();
+        handshake = null;
+        sharedKey = null;
+        setTimeout(() => {
+            RetryConnect();
+        }, 10);
     });
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-           // console.log("Received: '" + message.utf8Data + "'");
+            //console.log("Received: '" + message.utf8Data + "'");
 
             if (!handshake) {
                 var question_enc = JSON.parse(message.utf8Data).question;
@@ -92,12 +104,35 @@ client.on('connect', function (connection) {
                 }
             }
             else {
-                counter++;
-                var msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, message.utf8Data);
-                if (counter % 1000 == 0)
+                var msg = JSON.parse(message.utf8Data);
+                //console.log(msg);
+                if (msg.type === 'message')
                 {
-                    console.log(`${counter} - received decrypted : ${msg_dec}`);
-                }
+                    if (recv_ids.indexOf(msg.id) > -1)
+                    {
+                        //already got it, do nothing;
+                        duplicates++;
+                        console.log({duplicates});
+                    }
+                    else
+                    {
+                        recv_ids.push(msg.id);
+
+                        counter++;
+                        var msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, msg.msg);
+                        // if (counter % 1000 == 0)
+                        {
+                            console.log(`${counter} - received decrypted : ${msg.id} : ${msg_dec}`);
+                            const msg_enc = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify({type : 'ack' , payload : msg.id }));
+                            connection.sendUTF(msg_enc);
+                        }
+                    }
+                 }
+                 else if (msg.type === 'ack')
+                 {
+                     acks.push(msg.payload);
+                     console.log(msg);
+                 }
             }
 
         }
@@ -110,10 +145,11 @@ client.on('connect', function (connection) {
     }
 
     function RetryConnect() {
-        console.log("retrying to connect to server....");
-        setTimeout(() => {
+        if (!exitSignalReceived)
+        {
+            console.log("retrying to connect to server....");
             client.connect(serverAddress);
-        }, 1000);
+        }
     }
 
 
@@ -122,27 +158,92 @@ client.on('connect', function (connection) {
         if (connection.connected) {
             var number = Math.round(Math.random() * 0xFFFFFF);
             connection.sendUTF(number.toString());
-            setTimeout(sendNumber, 1000);
+            setTimeout(sendNumber, 1);
         }
     }
 
-    function sendHelloWorld() {
-        if (connection.connected) {
-            var number = Math.round(Math.random() * 0xFFFFFF);
-            var message = 'Hello World ' + number;
-            const msg = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, message);
+  
+    const maxCalls = 200;
+    function sendTestMessasges() {
+        if (connection.connected && sharedKey) {
+
+            callsCount++;
+            if (callsCount > maxCalls)
+                return;
+    
+            var id = uuidv4();
+            var message = {
+                id : id,
+                type : 'message',
+                receiver : 'MELI',
+                payload : `Hello World ${callsCount}`
+            }
+            var msg = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify(message));
             connection.sendUTF(msg);
-            console.log('sending : ' + msg);
-            setTimeout(sendHelloWorld, 100);
+
+            var count = 0;
+            var timer = setInterval(() => { 
+                count++; 
+                if (acks.indexOf(id) > -1)
+                {
+                    clearInterval(timer); 
+                }
+                else if (count >= 10) { 
+                    clearInterval(timer); 
+                    console.log(`could not send message to core :msg: ${msg}`);
+                } 
+                else
+                {
+                    if (connection.connected && sharedKey)
+                    {
+                        msg = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify(message));
+                        connection.sendUTF(msg);
+                        console.log(callsCount + '-retrying sending : ' + JSON.stringify(message));
+                    }
+                }
+            }, 2000);  
+
+            console.log(callsCount + '-sending : ' + JSON.stringify(message));
+            setTimeout(sendTestMessasges, 50);
         }
     }
 
     sayMyName();
 
-    // setTimeout(() => {
-    //     sendHelloWorld()
-    // }, 2000);
+    if (listenMode)
+    {
+        console.log("client is up and ready in listen mode");
+    }
+    else
+    {
+        setTimeout(() => {
+            sendTestMessasges()
+        }, 1000);
+    }
 
 });
+
+let exitSignalReceived = false;
+
+process.on('SIGINT', () => {
+    if (!exitSignalReceived) {
+        exitSignalReceived = true;
+        console.log('SIGTERM signal received.');
+        shutdown();
+    }
+    else {
+        console.log('application is shutting down. please wait...');
+    }
+});
+
+function shutdown()
+{
+    console.log('application is shutting down...');
+    client.socket.end();
+    setTimeout(() => {
+        process.exit(0);
+    }, 2000); 
+}
+
 
 client.connect(serverAddress);
