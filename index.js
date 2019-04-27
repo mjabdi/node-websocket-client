@@ -132,6 +132,8 @@ client.on('connect', function (connection) {
                         //already got it, do nothing;
                         duplicates++;
                         console.log({duplicates});
+                        const ack_enc = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify({type : 'ack' , payload : msg.id }));
+                        connection.sendUTF(ack_enc);
                     }
                     else
                     {
@@ -142,8 +144,8 @@ client.on('connect', function (connection) {
                         // if (counter % 1000 == 0)
                         {
                             console.log(`${counter} - received decrypted : ${msg.id} : ${msg_dec}`);
-                            const msg_enc = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify({type : 'ack' , payload : msg.id }));
-                            connection.sendUTF(msg_enc);
+                            const ack_enc = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify({type : 'ack' , payload : msg.id }));
+                            connection.sendUTF(ack_enc);
                         }
                     }
                  }
