@@ -4,6 +4,10 @@ const rsaWrapper = require('./rsa-wrapper');
 const aesWrapper = require('./aes-wrapper');
 const uuidv4 = require('uuid/v4');
 
+
+const maxCalls = 2000; 
+const sleepTime = 10; //ms
+
 const serverAddress = 'ws://localhost:8001';
 
 var WebSocketClient = require('websocket').client;
@@ -41,11 +45,26 @@ client.on('connect', function (connection) {
         sharedKey = null;
         setTimeout(() => {
             RetryConnect();
-        }, 10);
+        }, 100);
     });
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
-            //console.log("Received: '" + message.utf8Data + "'");
+            // console.log("Received: '" + message.utf8Data + "'");
+            try{
+                var jsonMessage = JSON.parse(message.utf8Data);
+                if (jsonMessage.type === 'error')
+                {
+                    console.log(`error : ${jsonMessage.payload}`);
+                    process.exit(1);
+                    return;
+                }
+                
+                if (jsonMessage.type === 'info')
+                {
+                    console.log(`info : ${jsonMessage.payload}`);
+                    return;
+                }
+            }catch(err) {}
 
             if (!handshake) {
                 var question_enc = JSON.parse(message.utf8Data).question;
@@ -134,7 +153,6 @@ client.on('connect', function (connection) {
                      console.log(msg);
                  }
             }
-
         }
     });
 
@@ -152,8 +170,6 @@ client.on('connect', function (connection) {
         }
     }
 
-
-
     function sendNumber() {
         if (connection.connected) {
             var number = Math.round(Math.random() * 0xFFFFFF);
@@ -162,8 +178,6 @@ client.on('connect', function (connection) {
         }
     }
 
-  
-    const maxCalls = 200;
     function sendTestMessasges() {
         if (connection.connected && sharedKey) {
 
@@ -183,12 +197,11 @@ client.on('connect', function (connection) {
 
             var count = 0;
             var timer = setInterval(() => { 
-                count++; 
                 if (acks.indexOf(id) > -1)
                 {
                     clearInterval(timer); 
                 }
-                else if (count >= 10) { 
+                else if (count >= 5) { 
                     clearInterval(timer); 
                     console.log(`could not send message to core :msg: ${msg}`);
                 } 
@@ -199,12 +212,13 @@ client.on('connect', function (connection) {
                         msg = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify(message));
                         connection.sendUTF(msg);
                         console.log(callsCount + '-retrying sending : ' + JSON.stringify(message));
+                        count++; 
                     }
                 }
             }, 2000);  
 
             console.log(callsCount + '-sending : ' + JSON.stringify(message));
-            setTimeout(sendTestMessasges, 50);
+            setTimeout(sendTestMessasges, sleepTime);
         }
     }
 
