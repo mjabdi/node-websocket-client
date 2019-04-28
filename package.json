@@ -13,6 +13,7 @@
   "dependencies": {
     "crypto": "^1.0.1",
     "node-rsa": "^1.0.5",
+    "socket.io-client": "^2.2.0",
     "uuid": "^3.3.2",
     "websocket": "^1.0.28"
   }
