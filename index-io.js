@@ -109,7 +109,7 @@ function sendTestMessages()
         return;
         
     counter++;
-    const msg =  {receiver: 'BSIR', message : `Test Message ${counter}`};
+    const msg =  {receiver: 'BSIR', payload: `Test Message ${counter}`};
     if (socket.connected)
     {
         socket.emit('message' , msg, function(data) {
@@ -119,7 +119,7 @@ function sendTestMessages()
 
     setTimeout(() => {
         sendTestMessages();
-    }, 1);
+    }, 100);
 }
 
 let exitSignalReceived = false;
