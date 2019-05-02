@@ -58,7 +58,9 @@ socket.on('authorized', (data) => {
     authorized = true;
     if (myName === 'MELI')
     {
-        sendTestMessages();
+        setTimeout(() => {
+            sendTestMessages();
+        }, 1000);    
     }
 });
 
@@ -87,7 +89,8 @@ let receivedCount = 0;
 socket.on('message', (data) =>
 {
     receivedCount++;
-    console.log(`${receivedCount} - message received : ${JSON.stringify(data)}`);
+    const msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, data);
+    console.log(`${receivedCount} - message received : ${msg_dec}`);
 });
 
 socket.on('disconnect', (reason) =>
@@ -97,7 +100,22 @@ socket.on('disconnect', (reason) =>
     if (!exitSignalReceived)
     {
         console.log('trying to reconnect...');
-        socket.open();        
+        socket.open();       
+        if (!socket.connected)
+        {
+            var timer = setInterval(() => { 
+
+                if (!socket.connected)
+                {
+                    console.log('trying to reconnect...');
+                    socket.open();
+                }
+                else
+                {
+                    clearInterval(timer);
+                }
+            }, 2000);  
+        }
     }
 });
 
@@ -112,14 +130,16 @@ function sendTestMessages()
     const msg =  {receiver: 'BSIR', payload: `Test Message ${counter}`};
     if (socket.connected)
     {
-        socket.emit('message' , msg, function(data) {
-            console.log(`message sent : ${JSON.stringify(data)}`);          
+        const msg_enc = aesWrapper.encrypt(sharedKey.key, sharedKey.iv, JSON.stringify(msg));
+        socket.emit('message' , msg_enc, function(data) {
+            const msg_dec = aesWrapper.decrypt(sharedKey.key, sharedKey.iv, data);
+            console.log(`message sent : ${msg_dec}`);          
         });
     }
 
     setTimeout(() => {
         sendTestMessages();
-    }, 100);
+    }, 1000);
 }
 
 let exitSignalReceived = false;
@@ -143,3 +163,4 @@ function shutdown()
 }
 
 socket.open();
+   
